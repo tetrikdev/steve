@@ -3,6 +3,13 @@ version: "3.7"
 volumes:
   db-data:
     external: false
+    
+networks:
+  gateway:
+    external: true
+  private:
+    external: false
+    name: private
 
 services:
 
@@ -21,7 +28,7 @@ services:
         max-size: "10m"
         max-file: "3"
     networks:
-      - gateway
+      - private
 
   ev:
     image: ev
@@ -41,6 +48,7 @@ services:
         max-size: "10m"
         max-file: "3"
     networks:
+      - private
       - gateway
     labels:
       - "traefik.enable=true"
