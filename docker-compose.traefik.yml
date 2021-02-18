@@ -1,0 +1,53 @@
+version: '3.7'
+
+services:
+  traefik:
+    image: traefik:v2.2
+    container_name: traefik
+    command:
+      - "--log.level=DEBUG"
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+
+      - "--entryPoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entryPoints.websecure.address=:443"
+
+      - "--certificatesResolvers.sslResolver.acme.httpChallenge=true"
+      - "--certificatesResolvers.sslResolver.acme.httpChallenge.entryPoint=web"
+      - "--certificatesResolvers.sslResolver.acme.email=tim@tetrik.com"
+      - "--certificatesResolvers.sslResolver.acme.storage=/letsencrypt/acme.json"
+    volumes:
+      - traefik-data:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - gateway
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.ev.tetrik.com`)"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$Nu66pX9e$$13lLukTXC0.X.3zU2WOsP0"
+      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
+      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.tetrik.com`)"
+      - "traefik.http.routers.traefik-secure.middlewares=traefik-auth"
+      - "traefik.http.routers.traefik-secure.tls=true"
+      - "traefik.http.routers.traefik-secure.tls.certResolver=sslResolver"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  gateway:
+    external: true
+
+volumes:
+  traefik-data:
